@@ -1,0 +1,20 @@
+{
+  "name": "redmine-jira-bridge",
+  "version": "0.0.1",
+  "description": "bridge jira-redmine",
+  "main": "server.js",
+  "dependencies": {
+    "koa": "^2.4.1",
+    "koa-body": "^2.5.0",
+    "koa-logger": "^3.1.0",
+    "koa-router": "^7.3.0",
+    "standard": "^10.0.3",
+    "superagent": "^3.8.1"
+  },
+  "scripts": {
+    "format": "standard --fix",
+    "start": "node server.js",
+    "docker": "npm run format && docker build -t coopengo/redmine-jira-bridge:$(node -pe \"require('./package.json').version\") ."
+  },
+  "author": "pierre.kunkel@coopengo.com"
+}
