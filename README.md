@@ -3,8 +3,8 @@ Jira Redmine Bridge
 TO DO :
 
 - [ ] Jira to Redmine Issue Transfer 
-       a. [x] Transfer issue Jira when type is bug or new feature 
-       b. [x] Synchronize Jira status to Redmine.
+      a. [x] Transfer issue Jira when type is bug or new feature 
+      b. [x] Synchronize Jira status to Redmine.
               1. [ ] Need a mapping of status
                      There are two type of status : 
                      - a category status
