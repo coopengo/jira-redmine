@@ -10,7 +10,7 @@ TO DO :
       - a category status
       - a workflow status
       Which one should i map ? 
-    - [ ] Map priority, tracker 
+    - [ ] Map priority, tracker(start at 10000 in Jira and 1 in Redmine) 
   - [x] Subject is the Jira issue key + : and the real subject 
 
 - [ ] Redmine to Jira issue Update
