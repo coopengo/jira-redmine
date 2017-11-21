@@ -3,7 +3,7 @@ Jira Redmine Bridge
 TO DO :
 
 - [ ] Jira to Redmine Issue Transfer 
-- [x] Transfer issue Jira when type is bug or new feature 
+  - [x] Transfer issue Jira when type is bug or new feature 
 - [x] Synchronize Jira status to Redmine.
 - [ ] Need a mapping of status
    There are two type of status : 
