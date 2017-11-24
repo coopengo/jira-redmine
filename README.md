@@ -2,23 +2,19 @@ Jira Redmine Bridge
 
 TO DO :
 
-- [ ] Jira to Redmine Issue Transfer 
+- [x] Jira to Redmine Issue Transfer 
   - [x] Transfer issue Jira when type is bug or new feature 
   - [x] Synchronize Jira status to Redmine.
-    - [ ] Need a mapping of status
-      There are two type of status : 
-      - a category status
-      - a workflow status
-      Which one should i map ? 
-    - [ ] Map priority, tracker(start at 10000 in Jira and 1 in Redmine) 
+    - [x] Need a mapping of status 
+    - [x] Map priority, tracker(start at 10000 in Jira and 1 in Redmine) 
   - [x] Subject is the Jira issue key + : and the real subject 
 
-- [ ] Redmine to Jira issue Update
-  - [ ] Load the plugin
-  - [ ] Synchronize Redmine change to Jira
+- [x] Redmine to Jira issue Update
+  - [x] Load the plugin
+  - [x] Synchronize Redmine change to Jira
 
-- [ ] Jira comment transfer to Redmine
-  - [ ] Plug webhook to created comment
+- [x] Jira comment transfer to Redmine
+  - [x] Plug webhook to created comment
 
 O) Optionals
    - [ ] \(Optional) Update Redmine plugin to separate issue and comment change
