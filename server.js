@@ -3,7 +3,33 @@ const Koa = require('koa')
 const router = require('koa-router')()
 const koaBody = require('koa-body')
 const logger = require('koa-logger')
+const os = require('os')
+const ifaces = os.networkInterfaces()
 
+let selfIp
+Object.keys(ifaces).forEach(function (ifname) {
+  let alias = 0
+
+  ifaces[ifname].forEach(function (iface) {
+    if (iface.family !== 'IPv4' || iface.internal !== false) {
+      // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+      return
+    }
+
+    if (alias >= 1) {
+      const address = iface.address.split('.')
+      if (address[0] === '172') {
+        selfIp = '^'.concat(address[0], '\\.', address[1])
+      }
+    } else {
+      const address = iface.address.split('.')
+      selfIp = address[0].concat('.', address[1])
+    }
+    ++alias
+  })
+})
+
+selfIp = new RegExp(selfIp)
 const RedmineMap = {
   '1': 51,
   '2': 11,
@@ -80,6 +106,10 @@ const main = async () => {
   app.use(logger())
 
   router.post('/redmine', koaBody(), async(ctx) => {
+    if (!ctx.ip.match(selfIp)) {
+      console.error('UNAUTHORIZED CON')
+      return
+    }
     const payload = ctx.request.body.payload
     if (payload.action === 'updated' && payload.journal.author.firstname !== 'Bot') {
       const issue = ctx.request.body.payload.issue
@@ -110,6 +140,11 @@ const main = async () => {
   })
 
   router.post('/jira/issue', koaBody(), async(ctx) => {
+    if (ctx.ip !== '::ffff:185.166.140.229') {
+      console.error('UNAUTHORIZED CON')
+      return
+    }
+    console.log('HELLO')
     const issueJira = ctx.request.body.issue
     const issueRed = await existingIssue(issueJira.key)
     if (issueRed.total_count) {
@@ -126,6 +161,10 @@ const main = async () => {
   })
 
   router.post('/jira/comment', koaBody(), async(ctx) => {
+    if (ctx.ip !== '::ffff:185.166.140.229') {
+      console.error('UNAUTHORIZED CON')
+      return
+    }
     if (ctx.request.body.comment.body.includes('Bot Redmine')) return
     const issueJira = ctx.request.body.issue
     const issueRed = await existingIssue(issueJira.key)
