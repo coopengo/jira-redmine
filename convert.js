@@ -1,6 +1,6 @@
 const server = require('./server')
 
-const bot = process.env.BOT_ID
+const bot = parseInt(process.env.BOT_ID)
 
 // Mapping des données Redmine aux données Jira
 const RedmineMapStatus = {
@@ -54,13 +54,13 @@ const RedmineJiraIssue = (issue) => {
 }
 
 const RedmineTreatment = (payload) => {
-  if (payload.action === 'updated' && payload.journal.author.id !== bot) {
+  if (payload.action === 'updated' && parseInt(payload.journal.author.id) !== bot) {
     const issue = payload.issue
 
     const comment = payload.journal
     const key = RedmineJiraIssue(issue)
     const data = {fields: {}}
-    let path
+    let path = ''
     if (comment.details.length) {
       for (const i in comment.details) {
         const detail = comment.details[i]
@@ -125,8 +125,9 @@ const JiraComment = async (payload) => {
   return {data, key}
 }
 
-const JiraUpdate = (issue) => {
-  if (issue.fields.customfield_10052) {
+const JiraUpdate = (payload) => {
+  const issue = payload.issue
+  if (issue.fields.customfield_10052 && payload.changelog) {
     const data = {}
     const keyTab = issue.fields.customfield_10052.split('/')
     const key = keyTab[keyTab.length - 1]

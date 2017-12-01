@@ -73,7 +73,7 @@ const main = async () => {
       console.error('UNAUTHORIZED CON')
       return
     }
-    const treatment = await convert.JiraUpdate(ctx.request.body.issue)
+    const treatment = await convert.JiraUpdate(ctx.request.body)
 
     if (treatment) {
       updateIssue(treatment.data, treatment.key)
@@ -114,7 +114,7 @@ const main = async () => {
     const treatment = await convert.JiraComment(ctx.request.body)
 
     if (treatment) {
-      updateIssue(treatment.date, treatment.key)
+      updateIssue(treatment.data, treatment.key)
     }
   })
 
