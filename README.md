@@ -1,4 +1,4 @@
-Jira Redmine Bridge
+Redmine Jira Bridge
 
 TO DO :
 
@@ -18,7 +18,7 @@ TO DO :
 
 O) Optionals
    - [ ] \(Optional) Update Redmine plugin to separate issue and comment change
-
+   - [x] \(Optional) Update Redmine plugin to add custom_fields
 
 Be careful the project identifier in Redmine should be the same
 project key in Jira **but** Redmine is in lowerCase and Jira
