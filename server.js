@@ -7,12 +7,12 @@ const logger = require('koa-logger')
 const convert = require('./convert')
 
 // env
-const JiraLogin = process.env.JIRALOGIN
-const JiraPassword = process.env.JIRAPASSWORD
-const RedmineApi = process.env.REDMINEJIRATOKEN
+const JiraLogin = process.env.JIRA_LOGIN
+const JiraPassword = process.env.JIRA_PASSWORD
+const RedmineApi = process.env.REDMINE_JIRA_TOKEN
 
-const JiraUrl = process.env.JIRAURL
-const RedmineUrl = process.enc.REDMINEURL
+const JiraUrl = process.env.JIRA_URL
+const RedmineUrl = process.env.REDMINE_URL
 
 // Méthode pour récupérer un attachment Jira
 const getAttachmentJira = async(attachment) => {
@@ -47,7 +47,7 @@ const main = async () => {
       console.error('UNAUTHORIZED CON')
       return
     }
-    const treatment = convert.RedmineTreatment(ctx.body.request.payload)
+    const treatment = convert.RedmineTreatment(ctx.request.body.payload)
     if (treatment) {
       switch (treatment.path) {
         case '':
@@ -68,12 +68,12 @@ const main = async () => {
     }
   })
 
-  router.post('/jira/status', koaBody(), async(ctx) => {
+  router.post('/jira/update', koaBody(), async(ctx) => {
     if (ctx.ip !== '::ffff:185.166.140.229') {
       console.error('UNAUTHORIZED CON')
       return
     }
-    const treatment = await convert.JiraUpdate(ctx.request.body)
+    const treatment = await convert.JiraUpdate(ctx.request.body.issue)
 
     if (treatment) {
       updateIssue(treatment.data, treatment.key)
@@ -123,9 +123,9 @@ const main = async () => {
 
   return `web server started on port 80`
 }
-module.export({
+module.exports = {
   getAttachmentJira
-})
+}
 
 main().then(
   (res) => console.log(res),

@@ -1,6 +1,6 @@
 const server = require('./server')
 
-const bot = process.env.BOTID
+const bot = process.env.BOT_ID
 
 // Mapping des données Redmine aux données Jira
 const RedmineMapStatus = {
@@ -84,7 +84,7 @@ const RedmineTreatment = (payload) => {
 
 const JiraComment = async (payload) => {
   const issue = payload.issue
-  const keyTab = issue.fields.customfield_100052.split('/')
+  const keyTab = issue.fields.customfield_10052.split('/')
   const key = keyTab[keyTab.length - 1]
   const data = {}
   const comment = payload.comment
@@ -128,7 +128,7 @@ const JiraComment = async (payload) => {
 const JiraUpdate = (issue) => {
   if (issue.fields.customfield_10052) {
     const data = {}
-    const keyTab = issue.fields.customfield_100052.split('/')
+    const keyTab = issue.fields.customfield_10052.split('/')
     const key = keyTab[keyTab.length - 1]
     const project = issue.fields.customfield_10056.id
     data['status_id'] = JiraMapStatus[issue.fields.status.id]
@@ -184,9 +184,9 @@ const JiraCreate = async (issue) => {
   return {data, coog, comments}
 }
 
-module.export({
+module.exports = {
   RedmineTreatment,
   JiraCreate,
   JiraComment,
   JiraUpdate
-})
+}
