@@ -1,6 +1,6 @@
 {
   "name": "redmine-jira-bridge",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "bridge jira-redmine",
   "main": "server.js",
   "dependencies": {
