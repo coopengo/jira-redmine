@@ -6,6 +6,8 @@ const logger = require('koa-logger')
 const os = require('os')
 const ifaces = os.networkInterfaces()
 
+// On récupère l'url du docker pour non autoriser les modification du
+// middleware vers JIRA en externe
 let selfIp
 Object.keys(ifaces).forEach(function (ifname) {
   let alias = 0
@@ -30,13 +32,17 @@ Object.keys(ifaces).forEach(function (ifname) {
 })
 
 selfIp = new RegExp(selfIp)
+// Mapping des données Redmine aux données Jira
 const RedmineMap = {
-  '1': 51,
   '2': 11,
-  '3': 41,
-  '4': 41,
-  '5': 61
+  '3': 51,
+  '4': 31,
+  '5': 71,
+  '7': 21,
+  '8': 61
 }
+
+// Mapping des données Jira aux données Redmine
 const JiraMapPriority = {
   '1': '5',
   '2': '4',
@@ -51,49 +57,115 @@ const JiraMapTracker = {
 }
 const JiraMapStatus = {
   '1': '1',
-  '10003': '4',
+  '3': '2',
+  '10000': '7',
+  '10001': '4',
+  '10002': '4',
   '10007': '5',
-  '10006': '2',
-  '4': '4'
+  '10008': '3',
+  '10009': '8'
 }
+const JiraMapProject = {
+  '10000': '1'
+}
+
+const RedmineMapProject = {
+  '2': '10005',
+  '1': '10006'
+}
+
+// Sauvegarde de l'issue Redmine pour un default dans
+// l'architecture
 const issueSave = {
 }
+
+// Méthode pour récupérer un attachment Jira
+const getAttachmentJira = async(attachment) => {
+  const reqAtt = await request.get(attachment.content)
+      .auth(process.env.JIRALOGIN, process.env.JIRAPASSWORD)
+  const req = await request.post(`${process.env.REDMINE_URL}/uploads.json`)
+      .auth(process.env.REDMINE_TOKEN, '')
+      .send(reqAtt.body)
+      .set('content-type', 'application/octet-stream')
+  return {token: req.body.upload.token, filename: attachment.filename, filetype: attachment.mimetype}
+}
+
+// Création d'un issue Redmine
 const createIssue = async(issue) => {
   // Maybe if there is an issue with done status do not create it ???
 
-  const postIssue = {'issue': {}}
-  postIssue.issue.project_id = issue.fields.project.key.toLowerCase()
-  postIssue.issue.priority_id = JiraMapPriority[issue.fields.priority.id]
-  postIssue.issue.description = issue.fields.description
-  postIssue.issue.subject = issue.key.concat(':', issue.fields.summary)
-  postIssue.issue.tracker_id = JiraMapTracker[issue.fields.issuetype.id]
-  postIssue.issue.status_id = JiraMapStatus[issue.fields.status.id]
+  // On récupère les attachments
+  const uploads = []
+  for (const idAtt in issue.fields.attachment) {
+    uploads.push(await getAttachmentJira(issue.fields.attachment[idAtt]))
+  }
 
+  const postIssue = {'issue': {}}
+  let project = issue.fields.project.key.toLowerCase()
+  let description = issue.fields.description
+  let subject = issue.fields.summary
+  if (issue.fields.customfield_10056 && issue.fields.customfield_10056.id === '10005') {
+    project = '2'
+    subject = issue.fields.customfield_10054
+    description = issue.fields.customfield_10055
+  }
+  postIssue.issue.priority_id = JiraMapPriority[issue.fields.priority.id]
+  postIssue.issue['description'] = description
+  postIssue.issue['project_id'] = project
+  postIssue.issue['subject'] = subject
+  postIssue.issue.tracker_id = JiraMapTracker[issue.fields.issuetype.id]
+  postIssue.issue.status_id = '1'
+  postIssue.issue.custom_fields = [
+    {'value': issue.key, 'id': 1}
+  ]
+  if (uploads.length > 0) {
+    postIssue.issue.uploads = uploads
+  }
   const ret = await request.post(`${process.env.REDMINE_URL}/issues.json`)
       .auth(process.env.REDMINE_TOKEN, '')
       .send(`${JSON.stringify(postIssue)}`)
       .type('json')
-
+  if (issue.fields.customfield_10056 && issue.fields.customfield_10056.id === '10005') {
+    const data = {'notes': `**$Title :**\n${issue.fields.summary}\n\n **Description :**\n ${issue.fields.description}`, 'private_notes': 1}
+    updateIssue(data, ret.body.issue.id)
+  }
+  // On ajoute tous les commentaires un par un
   for (const idComment in issue.fields.comment.comments) {
     const comment = issue.fields.comment.comments[idComment]
     const data = {'notes': `*${new Date(comment.updated).toLocaleString()} ${comment.author.displayName} :* ${comment.body}`}
     updateIssue(data, ret.body.issue.id)
   }
+
+  await request.put(`https://coopentest2.atlassian.net/rest/api/2/issue/${issue.key}`)
+    .auth(process.env.JIRALOGIN, process.env.JIRAPASSWORD)
+    .type('json')
+    .send({fields: {customfield_10052: `http://test-support.coopengo.com:3000/issues/${ret.body.issue.id}`}})
 }
 
+// On vérifie l'existance de l'issue Redmine
 const existingIssue = async(key) => {
   const req = await request.get(`${process.env.REDMINE_URL}/issues.json`)
-    .query({subject: `~${key}:`, status_id: '*'})
+    .query({cf_1: `${key}`, status_id: '*'})
     .type('json')
     .auth(process.env.REDMINE_TOKEN, '')
   return req.body
 }
 
+// Modification de l'issue Redmine
 const updateIssue = async (data, key) => {
   await request.put(`${process.env.REDMINE_URL}/issues/${key}.json`)
     .type('json')
     .send({issue: data})
     .auth(process.env.REDMINE_TOKEN, '')
+}
+
+const searchIssueKey = (issue) => {
+  const custom = issue.custom_fields
+  for (const idField in custom) {
+    if (custom[idField].id === 1) {
+      return custom[idField].value
+    }
+  }
 }
 
 const main = async () => {
@@ -113,28 +185,37 @@ const main = async () => {
     const payload = ctx.request.body.payload
     if (payload.action === 'updated' && payload.journal.author.firstname !== 'Bot') {
       const issue = ctx.request.body.payload.issue
-      const req = await request.get(`https://coopentest2.atlassian.net/rest/servicedeskapi/request/${issue.subject.split(':')[0]}`)
-        .auth('pierre.kunkel+jiratest@coopengo.com', 'Lolmdr62*')
-        .type('json')
 
       const comment = ctx.request.body.payload.journal
-      const jiraIssue = req.body
+      const issueKey = searchIssueKey(issue)
+      const data = {fields: {}}
       if (comment.details.length) {
         for (const i in comment.details) {
           const detail = comment.details[i]
           if (detail.prop_key === 'status_id') {
-            await request.post(`https://coopentest2.atlassian.net/rest/api/2/issue/${jiraIssue.issueId}/transitions`)
-              .auth('pierre.kunkel+jiratest@coopengo.com', 'Lolmdr62*')
-              .type('json')
-              .send({transition: {id: RedmineMap[detail.value]}})
-            issueSave[jiraIssue.key] = detail.value
+            data.transition = {id: RedmineMap[detail.value]}
+            issueSave[issueKey] = detail.value
+          } else if (detail.prop_key === 'project_id') {
+            data.fields.customfield_10056 = {id: RedmineMapProject[detail.value]}
           }
         }
+        if (data.transition) {
+          await request.post(`https://coopentest2.atlassian.net/rest/api/2/issue/${issueKey}/transitions`)
+              .auth(process.env.JIRALOGIN, process.env.JIRAPASSWORD)
+              .type('json')
+              .send(data)
+        } else {
+          await request.put(`https://coopentest2.atlassian.net/rest/api/2/issue/${issueKey}`)
+              .auth(process.env.JIRALOGIN, process.env.JIRAPASSWORD)
+              .type('json')
+              .send(data)
+        }
       } else {
-        await request.post(`https://coopentest2.atlassian.net/rest/api/2/issue/${jiraIssue.issueId}/comment`)
-        .auth('pierre.kunkel+jiratest@coopengo.com', 'Lolmdr62*')
+        if (comment.private_notes) return
+        await request.post(`https://coopentest2.atlassian.net/rest/api/2/issue/${issueKey}/comment`)
+        .auth(process.env.JIRALOGIN, process.env.JIRAPASSWORD)
         .type('json')
-        .send({body: JSON.stringify(`**${comment.author.firstname} ${comment.author.lastname}** : ${comment.notes}`)})
+        .send({body: `*Message transféré de ${comment.author.firstname} ${comment.author.lastname}* : ${comment.notes}`})
       }
     }
   })
@@ -144,19 +225,38 @@ const main = async () => {
       console.error('UNAUTHORIZED CON')
       return
     }
-    console.log('HELLO')
     const issueJira = ctx.request.body.issue
     const issueRed = await existingIssue(issueJira.key)
     if (issueRed.total_count) {
       const issueId = issueRed.issues[0].id
       const statusId = JiraMapStatus[issueJira.fields.status.id]
-      if (issueSave[issueRed.key] === statusId) {
+      if (issueSave[issueJira.key] === statusId) {
         delete issueSave[issueRed.key]
         return
       }
       updateIssue({status_id: statusId}, issueId)
     } else {
       createIssue(issueJira)
+    }
+  })
+
+  router.post('/jira/issueUpdate', koaBody(), async(ctx) => {
+    if (ctx.ip !== '::ffff:185.166.140.229') {
+      console.error('UNAUTHORIZED CON')
+      return
+    }
+    const issueJira = ctx.request.body.issue
+    const issueRed = await existingIssue(issueJira.key)
+    if (issueRed.total_count) {
+      const issueId = issueRed.issues[0].id
+      const project = issueJira.fields.customfield_10056.id
+      if (project === '10005' && issueRed.issues[0].project.id !== 2) {
+        console.log('coog')
+        updateIssue({project_id: 2}, issueId)
+      } else if (project === '10006' && issueRed.issues[0].project.id === 2) {
+        console.log('spec')
+        updateIssue({project_id: JiraMapProject[issueJira.fields.project.id]}, issueId)
+      }
     }
   })
 
@@ -171,7 +271,39 @@ const main = async () => {
 
     const issueId = issueRed.issues[0].id
     const comment = ctx.request.body.comment
-    updateIssue({'notes': `*${new Date(comment.updated).toLocaleString()} ${comment.author.displayName} :* ${comment.body}`}, issueId)
+    if (comment.body.match(/^\*Message transféré de /)) return
+    const splitedBody = comment.body.split('!')
+    let body = splitedBody[0]
+    const maxIds = splitedBody.length - 1
+    let currentId = 1
+
+    const uploads = []
+    while (currentId < maxIds) {
+      if (splitedBody[currentId].match(/\|thumbnail/)) {
+        const fileName = splitedBody[currentId].replace(/\|thumbnail/, '')
+        let maxAttId = issueJira.fields.attachment.length - 1
+        while (true) {
+          const attachment = issueJira.fields.attachment[maxAttId]
+          if (fileName === attachment.filename) {
+            uploads.push(await getAttachmentJira(issueJira.fields.attachment[maxAttId]))
+            break
+          }
+          maxAttId--
+        }
+        currentId++
+      } else {
+        body += '!' + splitedBody[currentId]
+      }
+      currentId++
+    }
+    const contentBody = {}
+    if (body !== undefined) {
+      contentBody.notes = `**${new Date(comment.updated).toLocaleString()} ${comment.author.displayName} :** ${body}`
+    }
+    if (uploads.length) {
+      contentBody.uploads = uploads
+    }
+    updateIssue(contentBody, issueId)
   })
 
   app.use(router.routes())
