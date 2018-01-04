@@ -44,6 +44,8 @@ const JiraMapProject = {
   '10000': '1'
 }
 
+// Change id of custom_field JiraIssue on Redmine
+
 const RedmineJiraIssue = (issue) => {
   const custom = issue.custom_fields
   for (const idField in custom) {
@@ -52,6 +54,8 @@ const RedmineJiraIssue = (issue) => {
     }
   }
 }
+
+// Change custom_field_10056 => Bug Type (Specific or Generic)
 
 const RedmineTreatment = (payload) => {
   if (payload.action === 'updated' && parseInt(payload.journal.author.id) !== bot) {
@@ -81,6 +85,7 @@ const RedmineTreatment = (payload) => {
     return {data, path, key}
   }
 }
+// Change custom_field_10052 => Redmine Issue Ref
 
 const JiraComment = async (payload) => {
   const issue = payload.issue
@@ -125,6 +130,8 @@ const JiraComment = async (payload) => {
   return {data, key}
 }
 
+// Change project value => 10005-10006 equal to bug type
+
 const JiraUpdate = (payload) => {
   const issue = payload.issue
   if (issue.fields.customfield_10052 && payload.changelog) {
@@ -145,7 +152,7 @@ const JiraUpdate = (payload) => {
 const JiraCreate = async (issue) => {
   const uploads = []
 
-  // On récupère les attachments
+  // Get attachment then load it on Redmine
   for (const idAtt in issue.fields.attachment) {
     uploads.push(await server.getAttachmentJira(issue.fields.attachment[idAtt]))
   }
@@ -156,6 +163,7 @@ const JiraCreate = async (issue) => {
   let subject = issue.fields.summary
   let coog
   const comments = []
+  // Change custom_field_10054-55 to english title and description if field on Jira
   if (issue.fields.customfield_10056 && issue.fields.customfield_10056.id === '10005') {
     project = '2'
     subject = issue.fields.customfield_10054
