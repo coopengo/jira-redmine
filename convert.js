@@ -1,55 +1,41 @@
 const server = require('./server')
+const properties = require('./config')
 
 const bot = parseInt(process.env.BOT_ID)
 
 // Mapping des données Redmine aux données Jira
-const RedmineMapStatus = {
-  '2': 11,
-  '3': 51,
-  '4': 31,
-  '5': 71,
-  '7': 21,
-  '8': 61
-}
+const RedmineMapStatus = properties.RedmineMapStatus
 
-const RedmineMapProject = {
-  '2': '10005',
-  '1': '10006'
-}
+const RedmineMapProject = properties.RedmineMapProject
 
 // Mapping des données Jira aux données Redmine
-const JiraMapPriority = {
-  '1': '5',
-  '2': '4',
-  '3': '3',
-  '4': '2',
-  '5': '1'
-}
-const JiraMapTracker = {
-  '10001': '1',
-  '10002': '3',
-  '10003': '2'
-}
-const JiraMapStatus = {
-  '1': '1',
-  '3': '2',
-  '10000': '7',
-  '10001': '4',
-  '10002': '4',
-  '10007': '5',
-  '10008': '3',
-  '10009': '8'
-}
-const JiraMapProject = {
-  '10000': '1'
-}
+const JiraMapPriority = properties.JiraMapPriority
+
+const JiraMapTracker = properties.JiraMapTracker
+
+const JiraMapStatus = properties.JiraMapStatus
+
+const JiraMapProject = properties.JiraMapProject
+
+// Load properties
+
+const JiraRedmineRef = properties.JiraRedmineRef
+const JiraBugType = properties.JiraBugType
+const JiraTitle = properties.JiraTitle
+const JiraDescription = properties.JiraDescription
+
+const JiraSpecifique = properties.JiraSpecfique
+const JiraGenerique = properties.JiraGenerique
+
+const RedmineJiraRef = properties.RedmineJiraRef
+const RedmineSupportDev = properties.RedmineSupportDev
 
 // Change id of custom_field JiraIssue on Redmine
 
 const RedmineJiraIssue = (issue) => {
   const custom = issue.custom_fields
   for (const idField in custom) {
-    if (custom[idField].id === 1) {
+    if (custom[idField].id === RedmineJiraRef) {
       return custom[idField].value
     }
   }
@@ -71,7 +57,7 @@ const RedmineTreatment = (payload) => {
         if (detail.prop_key === 'status_id') {
           data.transition = {id: RedmineMapStatus[detail.value]}
         } else if (detail.prop_key === 'project_id') {
-          data.fields.customfield_10056 = {id: RedmineMapProject[detail.value]}
+          data.fields[`customfield_${JiraBugType}`] = {id: RedmineMapProject[detail.value]}
         }
       }
       if (data.transition) {
@@ -89,7 +75,7 @@ const RedmineTreatment = (payload) => {
 
 const JiraComment = async (payload) => {
   const issue = payload.issue
-  const keyTab = issue.fields.customfield_10052.split('/')
+  const keyTab = issue.fields[`customfield_${JiraRedmineRef}`].split('/')
   const key = keyTab[keyTab.length - 1]
   const data = {}
   const comment = payload.comment
@@ -130,19 +116,17 @@ const JiraComment = async (payload) => {
   return {data, key}
 }
 
-// Change project value => 10005-10006 equal to bug type
-
 const JiraUpdate = (payload) => {
   const issue = payload.issue
-  if (issue.fields.customfield_10052 && payload.changelog) {
+  if (issue.fields[`customfield_${JiraBugType}`] && payload.changelog) {
     const data = {}
-    const keyTab = issue.fields.customfield_10052.split('/')
+    const keyTab = issue.fields[`customfield_${JiraRedmineRef}`].split('/')
     const key = keyTab[keyTab.length - 1]
-    const project = issue.fields.customfield_10056.id
+    const bugType = issue.fields[`customfield_${JiraBugType}`].id
     data['status_id'] = JiraMapStatus[issue.fields.status.id]
-    if (project === '10005') {
-      data['project_id'] = 2
-    } else if (project === '10006') {
+    if (bugType === JiraGenerique) {
+      data['project_id'] = parseInt(RedmineSupportDev)
+    } else if (bugType === JiraSpecifique) {
       data['project_id'] = JiraMapProject[issue.fields.project.id]
     }
     return {data, key}
@@ -164,10 +148,10 @@ const JiraCreate = async (issue) => {
   let coog
   const comments = []
   // Change custom_field_10054-55 to english title and description if field on Jira
-  if (issue.fields.customfield_10056 && issue.fields.customfield_10056.id === '10005') {
-    project = '2'
-    subject = issue.fields.customfield_10054
-    description = issue.fields.customfield_10055
+  if (issue.fields[`customfield_${JiraBugType}`] && issue.fields[`customfield_${JiraBugType}`] === JiraGenerique) {
+    project = RedmineSupportDev
+    subject = issue.fields[`customfield_${JiraTitle}`]
+    description = issue.fields[`customfield_${JiraDescription}`]
   }
   data.issue.priority_id = JiraMapPriority[issue.fields.priority.id]
   data.issue['description'] = description
@@ -177,12 +161,12 @@ const JiraCreate = async (issue) => {
   data.issue.status_id = '1'
   // Redmine field (Jira issue)
   data.issue.custom_fields = [
-    {'value': issue.key, 'id': 1}
+    {'value': issue.key, 'id': RedmineJiraRef}
   ]
   if (uploads.length > 0) {
     data.issue.uploads = uploads
   }
-  if (issue.fields.customfield_10056 && issue.fields.customfield_10056.id === '10005') {
+  if (issue.fields[`customfield_${JiraBugType}`] && issue.fields[`customfield_${JiraBugType}`].id === JiraGenerique) {
     coog = {'notes': `**$Title :**\n${issue.fields.summary}\n\n **Description :**\n ${issue.fields.description}`, 'private_notes': 1}
   }
   for (const idComment in issue.fields.comment.comments) {

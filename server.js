@@ -5,6 +5,7 @@ const koaBody = require('koa-body')
 const logger = require('koa-logger')
 
 const convert = require('./convert')
+const properties = require('./config')
 
 // env
 const JiraLogin = process.env.JIRA_LOGIN
@@ -12,8 +13,8 @@ const JiraPassword = process.env.JIRA_PASSWORD
 
 const RedmineApi = process.env.REDMINE_JIRA_TOKEN
 
-const JiraUrl = process.env.JIRA_URL
-const RedmineUrl = process.env.REDMINE_URL
+const JiraUrl = properties.JiraUrl
+const RedmineUrl = properties.RedmineUrl
 
 const postRequest = async (path, login, pass, data, type) => {
   return request.post(path)
@@ -100,8 +101,10 @@ const main = async () => {
         updateIssue(treatment.comments[comment], key)
       }
     }
+    const data = {'fields': {}}
+    data.fields[`customfield_$(properties.redmineRef)`] = `${JiraUrl}/${ret.body.issue.id}`
     // Change custom_field_10052 to Jira Redmine field id
-    await putRequest(`${JiraUrl}/${ctx.request.body.issue.key}`, JiraLogin, JiraPassword, {fields: {customfield_10052: `${JiraUrl}/${ret.body.issue.id}`}}, 'json')
+    await putRequest(`${JiraUrl}/${ctx.request.body.issue.key}`, JiraLogin, JiraPassword, data, 'json')
   })
 
   router.post('/jira/comment', koaBody(), async(ctx) => {
