@@ -1,60 +1,65 @@
+module.exports = {
 // URL
-const JiraURL = 'xxx'
-const RedmineURL = 'xxx'
+  JiraUrl: 'https://pierrecoog.atlassian.net/rest/api/2/issue',
+  RedmineUrlInternal: 'redmine:3000',
+  RedmineUrlExternal: 'http://suptest.coopengo.com',
 
 // Jira Fields
-const JiraRedmineRef = '10052'
-const JiraBugType = '10056'
-const JiraTtle = '10054'
-const JiraDescription = '10055'
+  JiraRedmineRef: '10026',
+  JiraBugType: '10027',
+  JiraTtle: '10028',
+  JiraDescription: '10029',
 
 // Jira Mapping
-const JiraSpecifique = '10006'
-const JiraGenerique = '10005'
+  JiraSpecifique: '10004',
+  JiraGenerique: '10003',
 
-const JiraMapPriority = {
-  '1': '5',
-  '2': '4',
-  '3': '3',
-  '4': '2',
-  '5': '1'
-}
-const JiraMapTracker = {
-  '10001': '1',
-  '10002': '3',
-  '10003': '2'
-}
-const JiraMapStatus = {
-  '1': '1',
-  '3': '2',
-  '10000': '7',
-  '10001': '4',
-  '10002': '4',
-  '10007': '5',
-  '10008': '3',
-  '10009': '8'
-}
-const JiraMapProject = {
-  '10000': '1'
-}
+  JiraMapPriority: {
+    '1': '5',
+    '2': '3',
+    '3': '2',
+    '4': '1',
+    '5': '10'
+  },
+  JiraMapTracker: {
+    '10006': 1,
+    '10007': 2
+  },
+  JiraMapStatus: {
+    '1': 1, // New
+    '3': 2, // In Progress
+    '5': 10, // Livré
+    '10000': 6, // Rejected
+    '10001': 4, // FeedBack
+    '10002': 4, // FeedBack
+    '10004': 6, // Rejected
+    '10008': 5, // Clos
+    '10009': 3// Review
+  },
+  JiraMapProject: {
+    '10000': 30
+  },
 
+  botAddress: 'billing@coopengo.com',
 // Redmine Field
-const RedmineJiraRef = 1
+  RedmineJiraRef: 36,
 
 // Redmine Mapping
 
-const RedmineMapStatus = {
-  '2': 11,
-  '3': 51,
-  '4': 31,
-  '5': 71,
-  '7': 21,
-  '8': 61
-}
+  RedmineMapStatus: {
+    '2': 11,
+    '3': 51,
+    '4': 31,
+    '5': 71,
+    '6': 21,
+    '10': 61
+  },
 
-const RedmineMapProject = {
-  '2': '10005',
-  '1': '10006'
-}
+  RedmineMapProject: {
+    '30': '10004',
+    '31': '10003'
+  },
 
-const RedmineSupportDev = '2'
+  RedmineBotId: 106,
+  RedmineSupportDev: '31'
+}

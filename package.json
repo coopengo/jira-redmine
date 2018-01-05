@@ -16,7 +16,7 @@
   "scripts": {
     "format": "standard --fix",
     "start": "node server.js",
-    "docker": "npm run format && docker build -t coopengo/redmine-jira-bridge:$(node -pe \"require('./package.json').version\") ."
+    "docker": "docker build -t bridge ."
   },
   "author": "pierre.kunkel@coopengo.com"
 }

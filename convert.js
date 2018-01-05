@@ -1,7 +1,17 @@
-const server = require('./server')
 const properties = require('./config')
+const requestModule = require('./requestModule')
 
-const bot = parseInt(process.env.BOT_ID)
+const JiraLogin = process.env.JIRA_LOGIN
+const JiraPassword = process.env.JIRA_PASSWORD
+
+const RedmineApi = process.env.REDMINE_JIRA_TOKEN
+
+const RedmineUrlInternal = properties.RedmineUrlInternal
+
+const getRequest = requestModule.getRequest
+const postRequest = requestModule.postRequest
+
+const bot = properties.RedmineBotId
 
 // Mapping des données Redmine aux données Jira
 const RedmineMapStatus = properties.RedmineMapStatus
@@ -24,13 +34,18 @@ const JiraBugType = properties.JiraBugType
 const JiraTitle = properties.JiraTitle
 const JiraDescription = properties.JiraDescription
 
-const JiraSpecifique = properties.JiraSpecfique
+const JiraSpecifique = properties.JiraSpecifique
 const JiraGenerique = properties.JiraGenerique
 
 const RedmineJiraRef = properties.RedmineJiraRef
 const RedmineSupportDev = properties.RedmineSupportDev
 
-// Change id of custom_field JiraIssue on Redmine
+// Méthode pour récupérer un attachment Jira
+const getAttachmentJira = async (attachment) => {
+  const reqAtt = await getRequest(attachment.content, JiraLogin, JiraPassword)
+  const req = await postRequest(`${RedmineUrlInternal}/uploads.json`, RedmineApi, '', reqAtt.body, 'octet-stream')
+  return {token: req.body.upload.token, filename: attachment.filename, filetype: attachment.mimetype}
+}
 
 const RedmineJiraIssue = (issue) => {
   const custom = issue.custom_fields
@@ -71,7 +86,6 @@ const RedmineTreatment = (payload) => {
     return {data, path, key}
   }
 }
-// Change custom_field_10052 => Redmine Issue Ref
 
 const JiraComment = async (payload) => {
   const issue = payload.issue
@@ -94,7 +108,7 @@ const JiraComment = async (payload) => {
       while (true) {
         const attachment = issue.fields.attachment[maxAttId]
         if (fileName === attachment.filename) {
-          uploads.push(await server.getAttachmentJira(issue.fields.attachment[maxAttId]))
+          uploads.push(await getAttachmentJira(issue.fields.attachment[maxAttId]))
           break
         }
         maxAttId--
@@ -118,7 +132,7 @@ const JiraComment = async (payload) => {
 
 const JiraUpdate = (payload) => {
   const issue = payload.issue
-  if (issue.fields[`customfield_${JiraBugType}`] && payload.changelog) {
+  if (issue.fields[`customfield_${JiraBugType}`] && payload.changelog && payload.user.emailAddress !== properties.botAddress) {
     const data = {}
     const keyTab = issue.fields[`customfield_${JiraRedmineRef}`].split('/')
     const key = keyTab[keyTab.length - 1]
@@ -126,8 +140,10 @@ const JiraUpdate = (payload) => {
     data['status_id'] = JiraMapStatus[issue.fields.status.id]
     if (bugType === JiraGenerique) {
       data['project_id'] = parseInt(RedmineSupportDev)
+      console.log("enerique")
     } else if (bugType === JiraSpecifique) {
       data['project_id'] = JiraMapProject[issue.fields.project.id]
+      data['custom_fields'] = [{'value': 50, 'id': 21}] 
     }
     return {data, key}
   }
@@ -138,7 +154,7 @@ const JiraCreate = async (issue) => {
 
   // Get attachment then load it on Redmine
   for (const idAtt in issue.fields.attachment) {
-    uploads.push(await server.getAttachmentJira(issue.fields.attachment[idAtt]))
+    uploads.push(await getAttachmentJira(issue.fields.attachment[idAtt]))
   }
 
   const data = {'issue': {}}
@@ -153,6 +169,7 @@ const JiraCreate = async (issue) => {
     subject = issue.fields[`customfield_${JiraTitle}`]
     description = issue.fields[`customfield_${JiraDescription}`]
   }
+  data.issue.category_id = 150
   data.issue.priority_id = JiraMapPriority[issue.fields.priority.id]
   data.issue['description'] = description
   data.issue['project_id'] = project
@@ -161,6 +178,7 @@ const JiraCreate = async (issue) => {
   data.issue.status_id = '1'
   // Redmine field (Jira issue)
   data.issue.custom_fields = [
+    {'value': 50, 'id': 21},
     {'value': issue.key, 'id': RedmineJiraRef}
   ]
   if (uploads.length > 0) {
