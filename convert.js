@@ -93,28 +93,34 @@ const r2jFormatComment = (journal) => {
 
 // Change custom_field_10056 => Bug Type (Specific or Generic)
 const r2j = ({action, issue, journal}) => {
-  let act, key, data
-  if (action === 'updated' && parseInt(journal.author.id) !== config.RedmineBotId) {
-    key = r2jGetJiraIssue(issue)
-    if (journal.details.length === 0) {
-      if (journal.private_notes) return {act, key, data}
-      act = 'comment'
-      data = {body: r2jFormatComment(journal)}
-      return {act, key, data}
-    }
-    act = 'update'
-    data = {fields: {}}
-    journal.details.forEach((detail) => {
-      // TODO: update title / desc?
-      if (detail.prop_key === 'status_id') {
-        data.transition = {id: config.RedmineMapStatus[detail.value]}
-      } else if (detail.prop_key === 'project_id') {
-        data.fields[`customfield_${config.JiraBugType}`] = {id: config.RedmineMapProject[detail.value]}
+  let act, data
+  const key = r2jGetJiraIssue(issue)
+  if (action === 'updated') {
+    if (parseInt(journal.author.id) !== config.RedmineBotId) {
+      if (journal.details.length === 0) {
+        if (journal.private_notes) return {act, key, data}
+        act = 'comment'
+        data = {body: r2jFormatComment(journal)}
+        return {act, key, data}
       }
-    })
-    if (data.transition) {
-      act = 'transition'
+      act = 'update'
+      data = {fields: {}}
+      journal.details.forEach((detail) => {
+        // TODO: update title / desc?
+        if (detail.prop_key === 'status_id') {
+          data.transition = {id: config.RedmineMapStatus[detail.value]}
+        } else if (detail.prop_key === 'project_id') {
+          data.fields[`customfield_${config.JiraBugType}`] = {id: config.RedmineMapProject[detail.value]}
+        }
+      })
+      if (data.transition) {
+        act = 'transition'
+      }
+    } else {
+      act = 'nothing'
     }
+  } else {
+    act = action
   }
   return {act, key, data}
 }

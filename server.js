@@ -92,7 +92,7 @@ const main = async () => {
     debug('%d redmine jira:%s', ctx.id, key)
     debug('%d redmine act:%s', ctx.id, act)
     debug('%d redmine data:%o', ctx.id, data)
-    if (act) {
+    if (act && act !== 'nothing') {
       switch (act) {
         case 'update':
           await jira.update(key, data)
