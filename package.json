@@ -1,0 +1,26 @@
+{
+  "name": "jira-redmine",
+  "version": "0.1.0",
+  "description": "Jira <-> Redmine bridge to use Jira Service Desk",
+  "author": "dev@coopengo.com",
+  "license": "MIT",
+  "repository": "git@github.com:coopengo/redmine-jira-bridge.git",
+  "private": true,
+  "main": "server.js",
+  "dependencies": {
+    "debug": "^3.1.0",
+    "koa": "^2.4.1",
+    "koa-body": "^2.5.0",
+    "koa-logger": "^3.1.0",
+    "koa-route": "^3.2.0",
+    "superagent": "^3.8.1"
+  },
+  "devDependencies": {
+    "standard": "latest"
+  },
+  "scripts": {
+    "format": "standard --fix",
+    "start": "node .",
+    "docker": "docker build -t coopengo/jira-redmine:$npm_package_version ."
+  }
+}
