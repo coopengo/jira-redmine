@@ -44,9 +44,10 @@ const j2rCreateIssue = async ({issue}) => {
     create.description = issue.fields.description
   }
 
-  Object.entries(issue.fields.comment.comments, (p) => {
-    create.notes.push(j2rFormatComment(p[1]))
-  })
+  for(let i = 0; i < issue.fields.comment.comments.length; i++){
+    p = issue.fields.comment.comments[i]
+    create.notes.push(j2rFormatComment(p))
+  }
 
   return create
 }
