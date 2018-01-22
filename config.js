@@ -1,9 +1,4 @@
 module.exports = {
-// URL
-  JiraUrl: 'https://pierrecoog.atlassian.net/rest/api/2/issue',
-  RedmineUrlInternal: 'redmine:3000',
-  RedmineUrlExternal: 'http://suptest.coopengo.com',
-
 // Jira Fields
   JiraRedmineRef: '10026',
   JiraBugType: '10027',
@@ -61,5 +56,5 @@ module.exports = {
   },
 
   RedmineBotId: 106,
-  RedmineSupportDev: '31'
+  RedmineSupportDev: 31
 }

@@ -1,56 +1,97 @@
-const properties = require('./config')
-const requestModule = require('./requestModule')
+const config = require('./config')
 
-const JiraLogin = process.env.JIRA_LOGIN
-const JiraPassword = process.env.JIRA_PASSWORD
+const j2rFormatComment = (comment) => {
+  const author = comment.author.displayName
+  const body = comment.body
+  return `**Message from ${author} on Jira**\n${body}`
+}
 
-const RedmineApi = process.env.REDMINE_JIRA_TOKEN
+const j2rGetJiraType = (issue) => {
+  return issue.fields[`customfield_${config.JiraBugType}`].id
+}
 
-const RedmineUrlInternal = properties.RedmineUrlInternal
+const j2rGetRedmineIssue = (issue) => {
+  const redmineURL = issue.fields[`customfield_${config.JiraRedmineRef}`]
+  return redmineURL.split('/').pop()
+}
 
-const getRequest = requestModule.getRequest
-const postRequest = requestModule.postRequest
+const j2rGetRedmineProject = (issue) => {
+  return config.JiraMapProject[issue.fields.project.id]
+}
 
-const bot = properties.RedmineBotId
+const j2rCreateIssue = async ({issue}) => {
+  // TODO: stream attachments
+  const create = {
+    category_id: 150,
+    tracker_id: config.JiraMapTracker[issue.fields.issuetype.id],
+    status_id: 1,
+    priority_id: config.JiraMapPriority[issue.fields.priority.id],
+    custom_fields: [
+      {id: 21, value: 50}, // TODO: hard coded?
+      {id: config.RedmineJiraRef, value: issue.key}
+    ],
+    notes: []
+  }
 
-// Mapping des données Redmine aux données Jira
-const RedmineMapStatus = properties.RedmineMapStatus
+  // TODO: why?
+  const type = j2rGetJiraType(issue)
+  if (type === config.JiraGenerique) {
+    create.project_id = config.RedmineSupportDev
+    create.subject = issue.fields[`customfield_${config.JiraTitle}`]
+    create.description = issue.fields[`customfield_${config.JiraDescription}`]
+  } else {
+    create.project_id = j2rGetRedmineProject(issue)
+    create.subject = issue.fields.summary
+    create.description = issue.fields.description
+  }
 
-const RedmineMapProject = properties.RedmineMapProject
+  Object.entries(issue.fields.comment.comments, (p) => {
+    create.notes.push(j2rFormatComment(p[1]))
+  })
 
-// Mapping des données Jira aux données Redmine
-const JiraMapPriority = properties.JiraMapPriority
+  return create
+}
 
-const JiraMapTracker = properties.JiraMapTracker
+const j2rUpdateIssue = async ({issue, user, changelog}) => {
+  if (changelog && user.emailAddress === config.botAddress) {
+    // TODO: stream attachments
+    const key = j2rGetRedmineIssue(issue)
 
-const JiraMapStatus = properties.JiraMapStatus
+    const update = {
+      status_id: config.JiraMapStatus[issue.fields.status.id],
+      custom_fields: []
+    }
 
-const JiraMapProject = properties.JiraMapProject
+    // TODO: why?
+    const type = j2rGetJiraType(issue)
+    if (type === config.JiraGenerique) {
+      update.project_id = config.RedmineSupportDev
+    } else if (type === config.JiraSpecifique) {
+      update.project_id = j2rGetRedmineProject(issue)
+      update.custom_fields.push({id: 21, value: 50}) // TODO: hard coded?
+    }
 
-// Load properties
+    return {key, update}
+  }
+}
 
-const JiraRedmineRef = properties.JiraRedmineRef
-const JiraBugType = properties.JiraBugType
-const JiraTitle = properties.JiraTitle
-const JiraDescription = properties.JiraDescription
+const j2rComment = async ({issue, user, comment}) => {
+  if (!comment.body.match(/^\*Message transféré de /)) {
+    const key = j2rGetRedmineIssue(issue)
 
-const JiraSpecifique = properties.JiraSpecifique
-const JiraGenerique = properties.JiraGenerique
+    // TODO: stream attachments
+    const update = {
+      notes: j2rFormatComment(comment)
+    }
 
-const RedmineJiraRef = properties.RedmineJiraRef
-const RedmineSupportDev = properties.RedmineSupportDev
-
-// Méthode pour récupérer un attachment Jira
-const getAttachmentJira = async (attachment) => {
-  const reqAtt = await getRequest(attachment.content, JiraLogin, JiraPassword)
-  const req = await postRequest(`${RedmineUrlInternal}/uploads.json`, RedmineApi, '', reqAtt.body, 'octet-stream')
-  return {token: req.body.upload.token, filename: attachment.filename, filetype: attachment.mimetype}
+    return {key, update}
+  }
 }
 
 const RedmineJiraIssue = (issue) => {
   const custom = issue.custom_fields
   for (const idField in custom) {
-    if (custom[idField].id === RedmineJiraRef) {
+    if (custom[idField].id === config.RedmineJiraRef) {
       return custom[idField].value
     }
   }
@@ -59,7 +100,7 @@ const RedmineJiraIssue = (issue) => {
 // Change custom_field_10056 => Bug Type (Specific or Generic)
 
 const RedmineTreatment = (payload) => {
-  if (payload.action === 'updated' && parseInt(payload.journal.author.id) !== bot) {
+  if (payload.action === 'updated' && parseInt(payload.journal.author.id) !== config.RedmineBotId) {
     const issue = payload.issue
 
     const comment = payload.journal
@@ -70,9 +111,9 @@ const RedmineTreatment = (payload) => {
       for (const i in comment.details) {
         const detail = comment.details[i]
         if (detail.prop_key === 'status_id') {
-          data.transition = {id: RedmineMapStatus[detail.value]}
+          data.transition = {id: config.RedmineMapStatus[detail.value]}
         } else if (detail.prop_key === 'project_id') {
-          data.fields[`customfield_${JiraBugType}`] = {id: RedmineMapProject[detail.value]}
+          data.fields[`customfield_${config.JiraBugType}`] = {id: config.RedmineMapProject[detail.value]}
         }
       }
       if (data.transition) {
@@ -87,117 +128,9 @@ const RedmineTreatment = (payload) => {
   }
 }
 
-const JiraComment = async (payload) => {
-  const issue = payload.issue
-  const keyTab = issue.fields[`customfield_${JiraRedmineRef}`].split('/')
-  const key = keyTab[keyTab.length - 1]
-  const data = {}
-  const comment = payload.comment
-
-  if (comment.body.match(/^\*Message transféré de /)) return
-  const splitedBody = comment.body.split('!')
-  let body = splitedBody[0]
-  const maxIds = splitedBody.length - 1
-  let currentId = 1
-
-  const uploads = []
-  while (currentId < maxIds) {
-    if (splitedBody[currentId].match(/\|thumbnail/)) {
-      const fileName = splitedBody[currentId].replace(/\|thumbnail/, '')
-      let maxAttId = issue.fields.attachment.length - 1
-      while (true) {
-        const attachment = issue.fields.attachment[maxAttId]
-        if (fileName === attachment.filename) {
-          uploads.push(await getAttachmentJira(issue.fields.attachment[maxAttId]))
-          break
-        }
-        maxAttId--
-      }
-      currentId++
-    } else {
-      body += '!' + splitedBody[currentId]
-    }
-    currentId++
-  }
-
-  if (body !== undefined) {
-    data.notes = `**${new Date(comment.updated).toLocaleString()} ${comment.author.displayName} :** ${body}`
-  }
-  if (uploads.length) {
-    data.uploads = uploads
-  }
-
-  return {data, key}
-}
-
-const JiraUpdate = (payload) => {
-  const issue = payload.issue
-  if (issue.fields[`customfield_${JiraBugType}`] && payload.changelog && payload.user.emailAddress !== properties.botAddress) {
-    const data = {}
-    const keyTab = issue.fields[`customfield_${JiraRedmineRef}`].split('/')
-    const key = keyTab[keyTab.length - 1]
-    const bugType = issue.fields[`customfield_${JiraBugType}`].id
-    data['status_id'] = JiraMapStatus[issue.fields.status.id]
-    if (bugType === JiraGenerique) {
-      data['project_id'] = parseInt(RedmineSupportDev)
-      console.log("enerique")
-    } else if (bugType === JiraSpecifique) {
-      data['project_id'] = JiraMapProject[issue.fields.project.id]
-      data['custom_fields'] = [{'value': 50, 'id': 21}] 
-    }
-    return {data, key}
-  }
-}
-
-const JiraCreate = async (issue) => {
-  const uploads = []
-
-  // Get attachment then load it on Redmine
-  for (const idAtt in issue.fields.attachment) {
-    uploads.push(await getAttachmentJira(issue.fields.attachment[idAtt]))
-  }
-
-  const data = {'issue': {}}
-  let project = JiraMapProject[issue.fields.project.id]
-  let description = issue.fields.description
-  let subject = issue.fields.summary
-  let coog
-  const comments = []
-  // Change custom_field_10054-55 to english title and description if field on Jira
-  if (issue.fields[`customfield_${JiraBugType}`] && issue.fields[`customfield_${JiraBugType}`] === JiraGenerique) {
-    project = RedmineSupportDev
-    subject = issue.fields[`customfield_${JiraTitle}`]
-    description = issue.fields[`customfield_${JiraDescription}`]
-  }
-  data.issue.category_id = 150
-  data.issue.priority_id = JiraMapPriority[issue.fields.priority.id]
-  data.issue['description'] = description
-  data.issue['project_id'] = project
-  data.issue['subject'] = subject
-  data.issue.tracker_id = JiraMapTracker[issue.fields.issuetype.id]
-  data.issue.status_id = '1'
-  // Redmine field (Jira issue)
-  data.issue.custom_fields = [
-    {'value': 50, 'id': 21},
-    {'value': issue.key, 'id': RedmineJiraRef}
-  ]
-  if (uploads.length > 0) {
-    data.issue.uploads = uploads
-  }
-  if (issue.fields[`customfield_${JiraBugType}`] && issue.fields[`customfield_${JiraBugType}`].id === JiraGenerique) {
-    coog = {'notes': `**$Title :**\n${issue.fields.summary}\n\n **Description :**\n ${issue.fields.description}`, 'private_notes': 1}
-  }
-  for (const idComment in issue.fields.comment.comments) {
-    const comment = issue.fields.comment.comments[idComment]
-    comments.push({'notes': `*${new Date(comment.updated).toLocaleString()} ${comment.author.displayName} :* ${comment.body}`})
-  }
-
-  return {data, coog, comments}
-}
-
 module.exports = {
-  RedmineTreatment,
-  JiraCreate,
-  JiraComment,
-  JiraUpdate
+  j2rCreateIssue,
+  j2rUpdateIssue,
+  j2rComment,
+  RedmineTreatment
 }
