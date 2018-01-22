@@ -37,9 +37,9 @@ const main = async () => {
     const ret = await redmine.create(create)
     const redmineKey = ret.body.issue.id
     debug('%d jira/create redmine:%o', ctx.id, redmineKey)
-    if (notes.length > 0) {
-      debug('%d jira/create notes:%o', ctx.id, notes)
-      redmine.update(redmineKey, {notes})
+    debug('%d jira/create notes:%o', ctx.id, notes)
+    for (let i = 0; i < notes.length; i++) {
+      redmine.update(redmineKey, {issue: {notes: notes[i]}})
     }
     await jira.update(jiraKey, {fields: {
       [`customfield_${config.JiraRedmineRef}`]: `${redmine.conf.externalURL}/issues/${redmineKey}`
