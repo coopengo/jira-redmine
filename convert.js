@@ -33,7 +33,6 @@ const j2rCreateIssue = async ({issue}) => {
     notes: []
   }
 
-  // TODO: why?
   const type = j2rGetJiraType(issue)
   if (type === config.JiraGenerique) {
     create.project_id = config.RedmineSupportDev
@@ -53,16 +52,14 @@ const j2rCreateIssue = async ({issue}) => {
 }
 
 const j2rUpdateIssue = async ({issue, user, changelog}) => {
+  // TODO: stream attachments
+  let key
+  const update = {
+    status_id: config.JiraMapStatus[issue.fields.status.id],
+    custom_fields: []
+  }
   if (changelog && user.emailAddress === config.botAddress) {
-    // TODO: stream attachments
-    const key = j2rGetRedmineIssue(issue)
-
-    const update = {
-      status_id: config.JiraMapStatus[issue.fields.status.id],
-      custom_fields: []
-    }
-
-    // TODO: why?
+    key = j2rGetRedmineIssue(issue)
     const type = j2rGetJiraType(issue)
     if (type === config.JiraGenerique) {
       update.project_id = config.RedmineSupportDev
@@ -70,9 +67,8 @@ const j2rUpdateIssue = async ({issue, user, changelog}) => {
       update.project_id = j2rGetRedmineProject(issue)
       update.custom_fields.push({id: 21, value: 50}) // TODO: hard coded?
     }
-
-    return {key, update}
   }
+  return {key, update}
 }
 
 const j2rComment = async ({issue, user, comment}) => {
