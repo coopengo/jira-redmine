@@ -1,9 +1,11 @@
 from node:8-alpine
 
-RUN mkdir redmine-jira-bridge
+RUN mkdir jira-redmine
+WORKDIR jira-redmine
 
-WORKDIR redmine-jira-bridge
-COPY package.json *.js ./
-RUN npm i --production
+COPY package.json .
+RUN yarn install --production
 
-ENTRYPOINT ["npm", "start"]
+COPY . .
+
+ENTRYPOINT ["yarn", "start"]
