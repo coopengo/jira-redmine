@@ -31,10 +31,16 @@ const main = async () => {
     const jiraKey = ctx.request.body.issue.key
     debug('%d jira/create jira:%s', ctx.id, jiraKey)
     const create = await convert.j2rCreateIssue(ctx.request.body)
+    const notes = create.notes
+    delete create.notes
     debug('%d jira/create upload:%o', ctx.id, create)
     const ret = await redmine.create(create)
     const redmineKey = ret.body.issue.id
     debug('%d jira/create redmine:%o', ctx.id, redmineKey)
+    if (notes.length > 0) {
+      debug('%d jira/create notes:%o', ctx.id, notes)
+      redmine.update(redmineKey, {notes})
+    }
     await jira.update(jiraKey, {fields: {
       [`customfield_${config.JiraRedmineRef}`]: `${redmine.conf.externalURL}/issues/${redmineKey}`
     }})
