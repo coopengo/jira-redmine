@@ -43,28 +43,22 @@ const j2rCreateIssue = async ({issue}) => {
     create.subject = issue.fields.summary
     create.description = issue.fields.description
   }
-
-  for(let i = 0; i < issue.fields.comment.comments.length; i++){
-    p = issue.fields.comment.comments[i]
-    create.notes.push(j2rFormatComment(p))
-  }
-
+  issue.fields.comment.comments.forEach((c) => {
+    create.notes.push(j2rFormatComment(c))
+  })
   return create
 }
 
 const j2rUpdateIssue = async ({issue, user, changelog}) => {
-  let key
-  let update
+  // TODO: stream attachments
+  let key, update
   if (changelog && user.emailAddress !== config.botAddress) {
-    // TODO: stream attachments
     key = j2rGetRedmineIssue(issue)
 
     update = {
       status_id: config.JiraMapStatus[issue.fields.status.id],
       custom_fields: []
     }
-
-    // TODO: why?
     const type = j2rGetJiraType(issue)
     if (type === config.JiraGenerique) {
       update.project_id = config.RedmineSupportDev
@@ -77,55 +71,52 @@ const j2rUpdateIssue = async ({issue, user, changelog}) => {
 }
 
 const j2rComment = async ({issue, user, comment}) => {
+  // TODO: stream attachments
   let key, update
   if (!comment.body.match(/^\*Message transféré de /)) {
     key = j2rGetRedmineIssue(issue)
-
-    // TODO: stream attachments
     update = {
       notes: j2rFormatComment(comment)
     }
-
   }
   return {key, update}
 }
 
-const r2jKey = (issue) => {
-  let i;
-  for (i = 0; i<issue.custom_fields.length; i++ ){
-    if (issue.custom_fields[i].id === config.RedmineJiraRef) {
-        return issue.custom_fields[i].value
-    }
-  }
+const r2jGetJiraIssue = (issue) => {
+  const field = issue.custom_fields.find((f) => f.id === config.RedmineJiraRef)
+  return field && field.value
+}
+
+const r2jFormatComment = (journal) => {
+  return `*Message transféré de ${journal.author.firstname} ${journal.author.lastname}* : ${journal.notes}`
 }
 
 // Change custom_field_10056 => Bug Type (Specific or Generic)
-
 const r2j = ({action, issue, journal}) => {
-  let key, update, path
+  let act, key, data
   if (action === 'updated' && parseInt(journal.author.id) !== config.RedmineBotId) {
-    key = r2jKey(issue)
-    update = {fields: {}}
-    path = ''
-    if (journal.details.length) {
-      for (let i = 0; i < journal.details.length;i ++){
-        const detail = journal.details[i]
-        if (detail.prop_key === 'status_id') {
-          update.transition = {id: config.RedmineMapStatus[detail.value]}
-        } else if (detail.prop_key === 'project_id') {
-          update.fields[`customfield_${config.JiraBugType}`] = {id: config.RedmineMapProject[detail.value]}
-        }
+    key = r2jGetJiraIssue(issue)
+    if (journal.details.length === 0) {
+      if (journal.private_notes) return {act, key, data}
+      act = 'comment'
+      data = {body: r2jFormatComment(journal)}
+      return {act, key, data}
+    }
+    act = 'update'
+    data = {fields: {}}
+    journal.details.forEach((detail) => {
+      // TODO: update title / desc?
+      if (detail.prop_key === 'status_id') {
+        data.transition = {id: config.RedmineMapStatus[detail.value]}
+      } else if (detail.prop_key === 'project_id') {
+        data.fields[`customfield_${config.JiraBugType}`] = {id: config.RedmineMapProject[detail.value]}
       }
-      if (update.transition) {
-        path = 'transitions'
-      }
-    } else {
-      if (journal.private_notes) return
-      path = 'comment'
-      update.body = `*Message transféré de ${journal.author.firstname} ${journal.author.lastname}* : ${journal.notes}`
+    })
+    if (data.transition) {
+      act = 'transition'
     }
   }
-  return {key, update, path}
+  return {act, key, data}
 }
 
 module.exports = {

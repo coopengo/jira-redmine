@@ -88,28 +88,31 @@ const main = async () => {
   app.use(route.post('/redmine', async(ctx) => {
     const redmineKey = ctx.request.body.payload.issue.id
     debug('%d redmine redmine:%s', ctx.id, redmineKey)
-    const {key, update, path} = await convert.r2j(ctx.request.body.payload)
+    const {act, key, data} = await convert.r2j(ctx.request.body.payload)
     debug('%d redmine jira:%s', ctx.id, key)
-    debug('%d redmine update:%o', ctx.id, update)
-    if (key) {
-        switch (path) {
-            case 'transitions':
-                await jira.transition(key, update)
-                break;
-            case 'comment':
-                await jira.createComment(key, update)
-                break;
-            default:
-                await jira.update(key, update)
-                break;
-        }
-        ctx.body = {
-            msg: 'ok'
-        }
+    debug('%d redmine act:%s', ctx.id, act)
+    debug('%d redmine data:%o', ctx.id, data)
+    if (act) {
+      switch (act) {
+        case 'update':
+          await jira.update(key, data)
+          break
+        case 'comment':
+          await jira.createComment(key, data)
+          break
+        case 'transition':
+          await jira.transition(key, data)
+          break
+        default:
+          ctx.throw(`insupported act ${act}`)
+      }
+      ctx.body = {
+        msg: 'ok'
+      }
     } else {
-        ctx.body = {
-            msg: 'nothing'
-        }
+      ctx.body = {
+        msg: 'nothing'
+      }
     }
   }))
 
