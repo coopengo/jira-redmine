@@ -23,7 +23,7 @@ const update = (issue, data) => request
     .send(data)
 
 const transition = (issue, data) => request
-    .post(`$(conf.url}/issue/${issue}/transition`)
+    .post(`${conf.url}/issue/${issue}/transitions`)
     .auth(conf.username, conf.password)
     .send(data)
 
