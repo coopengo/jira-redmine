@@ -22,8 +22,15 @@ const update = (issue, data) => request
     .auth(conf.token, '')
     .send({issue: data})
 
+const addAttachment = (buffer) => request
+    .post(`${conf.internalURL}/uploads.json`)
+    .auth(conf.token, '')
+    .type('octet-stream')
+    .send(buffer)
+
 module.exports = {
   conf,
   create,
-  update
+  update,
+  addAttachment
 }

@@ -1,4 +1,12 @@
 const config = require('./config')
+const jira = require('./jira')
+const redmine = require('./redmine')
+
+const j2rAttachment = async (attachment) => {
+  const jiraReq = await jira.getAttachment(attachment.content)
+  const req = await redmine.addAttachment(jiraReq.body)
+  return {token: req.body.upload.token, filename: attachment.filename, filetype: attachment.mimeType}
+}
 
 const j2rFormatComment = (comment) => {
   const author = comment.author.displayName
@@ -30,9 +38,10 @@ const j2rCreateIssue = async ({issue}) => {
       {id: 21, value: 50}, // TODO: hard coded?
       {id: config.RedmineJiraRef, value: issue.key}
     ],
-    notes: []
+    notes: [],
+    uploads: []
   }
-
+  const uploads = issue.fields.attachment.map(a => j2rAttachment(a).then(r => create.uploads.push(r)))
   const type = j2rGetJiraType(issue)
   if (type === config.JiraGenerique) {
     create.project_id = config.RedmineSupportDev
@@ -46,6 +55,7 @@ const j2rCreateIssue = async ({issue}) => {
   issue.fields.comment.comments.forEach((c) => {
     create.notes.push(j2rFormatComment(c))
   })
+  await Promise.all(uploads)
   return create
 }
 
@@ -54,10 +64,14 @@ const j2rUpdateIssue = async ({issue, user, changelog}) => {
   let key, update
   if (changelog && user.emailAddress !== config.botAddress) {
     key = j2rGetRedmineIssue(issue)
-
+    const attachments = changelog.items
+        .filter(i => i.field === 'Attachment')
+        .map(a => issue.fields.attachment.find(ia => ia.id === a.to))
+    const uploads = attachments.map(a => j2rAttachment(a).then(r => update.uploads.push(r)))
     update = {
       status_id: config.JiraMapStatus[issue.fields.status.id],
-      custom_fields: []
+      custom_fields: [],
+      uploads: []
     }
     const type = j2rGetJiraType(issue)
     if (type === config.JiraGenerique) {
@@ -66,6 +80,7 @@ const j2rUpdateIssue = async ({issue, user, changelog}) => {
       update.project_id = j2rGetRedmineProject(issue)
       update.custom_fields.push({id: 21, value: 50}) // TODO: hard coded?
     }
+    await Promise.all(uploads)
   }
   return {key, update}
 }
@@ -74,9 +89,12 @@ const j2rComment = async ({issue, user, comment}) => {
   // TODO: stream attachments
   let key, update
   if (!comment.body.match(/^\*Message transféré de /)) {
-    key = j2rGetRedmineIssue(issue)
-    update = {
-      notes: j2rFormatComment(comment)
+    comment.body.replace(/!\w+\.\w+\|thumbnail!/, '')
+    if(comment.body !== ''){
+        key = j2rGetRedmineIssue(issue)
+        update = {
+        notes: j2rFormatComment(comment)
+        }
     }
   }
   return {key, update}
