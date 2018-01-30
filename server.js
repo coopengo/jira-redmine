@@ -41,6 +41,7 @@ const main = async () => {
     for (let i = 0; i < notes.length; i++) {
       redmine.update(redmineKey, {issue: {notes: notes[i]}})
     }
+    debug('%d jira/create ref: %s', ctx.id, config.JiraRedmineRef)
     await jira.update(jiraKey, {fields: {
       [`customfield_${config.JiraRedmineRef}`]: `${redmine.conf.externalURL}/issues/${redmineKey}`
     }})
@@ -50,6 +51,7 @@ const main = async () => {
   }))
 
   app.use(route.post('/jira/update', async(ctx) => {
+    debugHTTP('changelog : %O', ctx.request.body.changelog)
     const jiraKey = ctx.request.body.issue.key
     debug('%d jira/update jira:%s', ctx.id, jiraKey)
     const {key, update} = await convert.j2rUpdateIssue(ctx.request.body)

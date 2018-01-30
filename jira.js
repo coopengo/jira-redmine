@@ -32,10 +32,15 @@ const createComment = (issue, data) => request
     .auth(conf.username, conf.password)
     .send(data)
 
+const getAttachment = (url) => request
+    .get(url)
+    .auth(conf.username, conf.password)
+
 module.exports = {
   conf,
   create,
   update,
   transition,
-  createComment
+  createComment,
+  getAttachment
 }
