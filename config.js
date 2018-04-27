@@ -5,7 +5,7 @@ module.exports = {
   JiraTtle: '10028',
   JiraDescription: '10029',
 
-// Jira Mapping
+  // Jira Mapping
   JiraSpecifique: '10004',
   JiraGenerique: '10003',
 
@@ -31,15 +31,17 @@ module.exports = {
     '10008': 5, // Clos
     '10009': 3// Review
   },
+  JiraDelivered: 5,
+  JiraDeliveredField: '10043',
   JiraMapProject: {
     '10000': 30
   },
 
   botAddress: 'billing@coopengo.com',
-// Redmine Field
+  // Redmine Field
   RedmineJiraRef: 36,
 
-// Redmine Mapping
+  // Redmine Mapping
 
   RedmineMapStatus: {
     '2': 11,

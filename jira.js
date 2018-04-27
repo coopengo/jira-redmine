@@ -13,28 +13,34 @@ Object.entries(conf).forEach((p) => {
 })
 
 const create = (data) => request
-    .post(`${conf.url}/issue`)
-    .auth(conf.username, conf.password)
-    .send(data)
+  .post(`${conf.url}/issue`)
+  .auth(conf.username, conf.password)
+  .send(data)
 
 const update = (issue, data) => request
-    .put(`${conf.url}/issue/${issue}`)
-    .auth(conf.username, conf.password)
-    .send(data)
+  .put(`${conf.url}/issue/${issue}`)
+  .auth(conf.username, conf.password)
+  .send(data)
 
 const transition = (issue, data) => request
-    .post(`${conf.url}/issue/${issue}/transitions`)
-    .auth(conf.username, conf.password)
-    .send(data)
+  .post(`${conf.url}/issue/${issue}/transitions`)
+  .auth(conf.username, conf.password)
+  .send(data)
 
 const createComment = (issue, data) => request
-    .post(`${conf.url}/issue/${issue}/comment`)
-    .auth(conf.username, conf.password)
-    .send(data)
+  .post(`${conf.url}/issue/${issue}/comment`)
+  .auth(conf.username, conf.password)
+  .send(data)
 
 const getAttachment = (url) => request
-    .get(url)
-    .auth(conf.username, conf.password)
+  .get(url)
+  .auth(conf.username, conf.password)
+  .buffer()
+
+const delivered = (issue, delivered) => request
+  .put(`${conf.url}/issue/${issue}`)
+  .auth(conf.username, conf.password)
+  .send(delivered)
 
 module.exports = {
   conf,
@@ -42,5 +48,6 @@ module.exports = {
   update,
   transition,
   createComment,
-  getAttachment
+  getAttachment,
+  delivered
 }

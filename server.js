@@ -27,7 +27,7 @@ const main = async () => {
     await next()
   })
 
-  app.use(route.post('/jira/create', async(ctx) => {
+  app.use(route.post('/jira/create', async (ctx) => {
     const jiraKey = ctx.request.body.issue.key
     debug('%d jira/create jira:%s', ctx.id, jiraKey)
     const create = await convert.j2rCreateIssue(ctx.request.body)
@@ -50,11 +50,11 @@ const main = async () => {
     }
   }))
 
-  app.use(route.post('/jira/update', async(ctx) => {
+  app.use(route.post('/jira/update', async (ctx) => {
     debugHTTP('changelog : %O', ctx.request.body.changelog)
     const jiraKey = ctx.request.body.issue.key
     debug('%d jira/update jira:%s', ctx.id, jiraKey)
-    const {key, update} = await convert.j2rUpdateIssue(ctx.request.body)
+    const {key, update, delivered} = await convert.j2rUpdateIssue(ctx.request.body)
     debug('%d jira/update redmine:%s', ctx.id, key)
     debug('%d jira/update upload:%o', ctx.id, update)
     if (key) {
@@ -67,9 +67,12 @@ const main = async () => {
         msg: 'nothing'
       }
     }
+    if (delivered) {
+      await jira.delivered(jiraKey)
+    }
   }))
 
-  app.use(route.post('/jira/comment', async(ctx) => {
+  app.use(route.post('/jira/comment', async (ctx) => {
     const jiraKey = ctx.request.body.issue.key
     debug('%d jira/comment jira:%s', ctx.id, jiraKey)
     const {key, update} = await convert.j2rComment(ctx.request.body)
@@ -87,7 +90,7 @@ const main = async () => {
     }
   }))
 
-  app.use(route.post('/redmine', async(ctx) => {
+  app.use(route.post('/redmine', async (ctx) => {
     const redmineKey = ctx.request.body.payload.issue.id
     debug('%d redmine redmine:%s', ctx.id, redmineKey)
     const {act, key, data} = await convert.r2j(ctx.request.body.payload)

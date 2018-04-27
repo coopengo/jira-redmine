@@ -13,20 +13,18 @@ Object.entries(conf).forEach((p) => {
 })
 
 const create = (data) => request
-    .post(`${conf.internalURL}/issues.json`)
-    .auth(conf.token, '')
-    .send({issue: data})
+  .post(`${conf.internalURL}/issues.json`)
+  .auth(conf.token, '')
+  .send({issue: data})
 
 const update = (issue, data) => request
-    .put(`${conf.internalURL}/issues/${issue}.json`)
-    .auth(conf.token, '')
-    .send({issue: data})
+  .put(`${conf.internalURL}/issues/${issue}.json`)
+  .auth(conf.token, '')
+  .send({issue: data})
 
-const addAttachment = (buffer) => request
-    .post(`${conf.internalURL}/uploads.json`)
-    .auth(conf.token, '')
-    .type('octet-stream')
-    .send(buffer)
+const addAttachment = () => request
+  .post(`${conf.internalURL}/uploads.json`)
+  .auth(conf.token, '')
 
 module.exports = {
   conf,

@@ -1,6 +1,6 @@
 {
   "name": "jira-redmine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Jira <-> Redmine bridge to use Jira Service Desk",
   "author": "dev@coopengo.com",
   "license": "MIT",
@@ -13,6 +13,7 @@
     "koa-body": "^2.5.0",
     "koa-logger": "^3.1.0",
     "koa-route": "^3.2.0",
+    "moment": "^2.22.1",
     "superagent": "^3.8.1"
   },
   "devDependencies": {
