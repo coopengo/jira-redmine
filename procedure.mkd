@@ -1,0 +1,22 @@
+# Changement a effectuer lors de l'update serveur
+
+## Fichier __nginx/conf/support.coopengo.conf__
+
+`server bridge:80` ==> `server jira:3000`
+
+*Optionnel :*
+
+Changer les chemins d'accès
+
+`etc/nginx/certs/*` ==> `/etc/letsencrypt/*`
+
+## Fichier __docker-compose.yml__
+
+Renommer le nom du container et le service bridge par jira
+L'image est disponible sur coopengo/jira-redmine:0.1.0
+
+Les variables d'environnement sont :
+* JIRA_USERNAME
+* JIRA_PASSWORD
+* REDMINE_TOKEN
+* DEBUG: "bridge" #ou bridge:http

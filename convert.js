@@ -81,6 +81,9 @@ const j2rUpdateIssue = async ({issue, user, changelog}) => {
       update.custom_fields.push({id: 21, value: 50}) // TODO: hard coded?
     }
     await Promise.all(uploads)
+    if (!update.custom_fields.length) {
+      delete update['custom_fields']
+    }
   }
   return {key, update}
 }
@@ -90,11 +93,11 @@ const j2rComment = async ({issue, user, comment}) => {
   let key, update
   if (!comment.body.match(/^\*Message transféré de /)) {
     comment.body.replace(/!\w+\.\w+\|thumbnail!/, '')
-    if(comment.body !== ''){
-        key = j2rGetRedmineIssue(issue)
-        update = {
+    if (comment.body !== '') {
+      key = j2rGetRedmineIssue(issue)
+      update = {
         notes: j2rFormatComment(comment)
-        }
+      }
     }
   }
   return {key, update}
