@@ -1,13 +1,13 @@
-const _ = require('lodash')
 const config = require('./config')
-const jira = require('./jira')
-const redmine = require('./redmine')
+const moment = require('moment')
+// const jira = require('./jira')
+// const redmine = require('./redmine')
 
-//const j2rAttachment = async (attachment) => {
+// const j2rAttachment = async (attachment) => {
 //  let jiraReq = jira.getAttachment(attachment.content)
 //  const req = redmine.addAttachment()
 //  jiraReq.pipe(req)
-//}
+// }
 
 const j2rFormatComment = (comment) => {
   const author = comment.author.displayName
@@ -42,7 +42,7 @@ const j2rCreateIssue = async ({issue}) => {
     notes: [],
     uploads: []
   }
-  //const uploads = issue.fields.attachment.map(a => j2rAttachment(a).then(r => create.uploads.push(r)))
+  // const uploads = issue.fields.attachment.map(a => j2rAttachment(a).then(r => create.uploads.push(r)))
   const type = j2rGetJiraType(issue)
   if (type === config.JiraGenerique) {
     create.project_id = config.RedmineSupportDev
@@ -56,19 +56,19 @@ const j2rCreateIssue = async ({issue}) => {
   issue.fields.comment.comments.forEach((c) => {
     create.notes.push(j2rFormatComment(c))
   })
-  //await Promise.all(uploads)
+  // await Promise.all(uploads)
   return create
 }
 
 const j2rUpdateIssue = async ({issue, user, changelog}) => {
   // TODO: stream attachments
-  let key, update
+  let key, update, delivered
   if (changelog && user.emailAddress !== config.botAddress) {
     key = j2rGetRedmineIssue(issue)
-    const attachments = changelog.items
-      .filter(i => i.field === 'Attachment')
-      .map(a => issue.fields.attachment.find(ia => ia.id === a.to))
-    //const uploads = attachments.map(a => j2rAttachment(a).then(r => update.uploads.push(r)))
+    // const attachments = changelog.items
+    //  .filter(i => i.field === 'Attachment')
+    //  .map(a => issue.fields.attachment.find(ia => ia.id === a.to))
+    // const uploads = attachments.map(a => j2rAttachment(a).then(r => update.uploads.push(r)))
     update = {
       status_id: config.JiraMapStatus[issue.fields.status.id],
       custom_fields: [],
@@ -81,12 +81,19 @@ const j2rUpdateIssue = async ({issue, user, changelog}) => {
       update.project_id = j2rGetRedmineProject(issue)
       update.custom_fields.push({id: 21, value: 50}) // TODO: hard coded?
     }
-    //await Promise.all(uploads)
+    // await Promise.all(uploads)
     if (!update.custom_fields.length) {
       delete update['custom_fields']
     }
+    if (issue.fields.status.id === config.JiraDelivered) {
+      delivered = {
+        fields: {
+          [`custom_field_${config.JiraDeliveredField}`]: moment().format('YYYY-MM-DD')
+        }
+      }
+    }
   }
-  return {key, update}
+  return {key, update, delivered}
 }
 
 const j2rComment = async ({issue, user, comment}) => {
@@ -148,7 +155,7 @@ const r2j = ({action, issue, journal}) => {
 }
 
 module.exports = {
-  //j2rAttachment,
+  // j2rAttachment,
   j2rCreateIssue,
   j2rUpdateIssue,
   j2rComment,

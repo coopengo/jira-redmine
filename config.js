@@ -31,6 +31,8 @@ module.exports = {
     '10008': 5, // Clos
     '10009': 3// Review
   },
+  JiraDelivered: 5,
+  JiraDeliveredField: '10043',
   JiraMapProject: {
     '10000': 30
   },

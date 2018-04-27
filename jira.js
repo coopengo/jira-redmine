@@ -37,11 +37,17 @@ const getAttachment = (url) => request
   .auth(conf.username, conf.password)
   .buffer()
 
+const delivered = (issue, delivered) => request
+  .put(`${conf.url}/issue/${issue}`)
+  .auth(conf.username, conf.password)
+  .send(delivered)
+
 module.exports = {
   conf,
   create,
   update,
   transition,
   createComment,
-  getAttachment
+  getAttachment,
+  delivered
 }

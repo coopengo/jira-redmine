@@ -54,7 +54,7 @@ const main = async () => {
     debugHTTP('changelog : %O', ctx.request.body.changelog)
     const jiraKey = ctx.request.body.issue.key
     debug('%d jira/update jira:%s', ctx.id, jiraKey)
-    const {key, update} = await convert.j2rUpdateIssue(ctx.request.body)
+    const {key, update, delivered} = await convert.j2rUpdateIssue(ctx.request.body)
     debug('%d jira/update redmine:%s', ctx.id, key)
     debug('%d jira/update upload:%o', ctx.id, update)
     if (key) {
@@ -66,6 +66,9 @@ const main = async () => {
       ctx.body = {
         msg: 'nothing'
       }
+    }
+    if (delivered) {
+      await jira.delivered(jiraKey)
     }
   }))
 
